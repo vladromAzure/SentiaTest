@@ -1,6 +1,4 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <sitemanifest>
-  <IisApp path="C:\Users\vladislav.romanenko\Source\Repos\SntWeb\SntWebForm\obj\Release\Package\PackageTmp" />
-  <setAcl path="C:\Users\vladislav.romanenko\Source\Repos\SntWeb\SntWebForm\obj\Release\Package\PackageTmp" setAclResourceType="Directory" />
-  <setAcl path="C:\Users\vladislav.romanenko\Source\Repos\SntWeb\SntWebForm\obj\Release\Package\PackageTmp" setAclUser="anonymousAuthenticationUser" setAclResourceType="Directory" />
+  <IisApp path="C:\Users\Vladislav_2\Documents\GitHub\SntWeb\WebApplication1\obj\Release\netcoreapp2.2\PubTmp\Out\" />
 </sitemanifest>
