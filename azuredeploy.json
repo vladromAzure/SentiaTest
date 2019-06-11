@@ -32,11 +32,11 @@
     },
     "instanceCount": {
       "type": "int",
-      "defaultValue": 2,
+      "defaultValue": 1,
       "metadata": {
         "description": "Number of VM instances (100 or less)."
       },
-      "maxValue": 3
+      "maxValue": 2
     },
     "adminUsername": {
       "type": "string",
@@ -461,7 +461,7 @@
             "name": "Profile1",
             "capacity": {
               "minimum": "1",
-              "maximum": "4",
+              "maximum": "2",
               "default": "1"
             },
             "rules": [
@@ -475,7 +475,7 @@
                   "timeWindow": "PT5M",
                   "timeAggregation": "Average",
                   "operator": "GreaterThan",
-                  "threshold": 70
+                  "threshold": 80
                 },
                 "scaleAction": {
                   "direction": "Increase",
@@ -494,7 +494,7 @@
                   "timeWindow": "PT5M",
                   "timeAggregation": "Average",
                   "operator": "LessThan",
-                  "threshold": 40
+                  "threshold": 50
                 },
                 "scaleAction": {
                   "direction": "Decrease",
