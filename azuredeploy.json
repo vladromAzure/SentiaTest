@@ -97,7 +97,7 @@
       "type": "string",
       "defaultValue": "Cool",
       "metadata": {
-        "description" : "Storage access tier for data lake storage"
+        "description": "Storage access tier for data lake storage"
       }
     }
   },
@@ -119,11 +119,9 @@
     "natStartPort": 50000,
     "natEndPort": 50119,
     "natBackendPort": 3389,
-    "nicName": "[concat(variables('namingInfix'), 'nic')]",
-    "ipConfigName": "[concat(variables('namingInfix'), 'ipconfig')]",
     "frontEndIPConfigID": "[concat(variables('lbID'),'/frontendIPConfigurations/loadBalancerFrontEnd')]",
-    "keyVaultName" : "[concat(variables('namingInfix'), 'keyvault')]",
-    "dataLakeName" : "[concat(variables('namingInfix'), 'datalake')]",
+    "keyVaultName": "[concat(variables('namingInfix'), 'keyvault')]",
+    "dataLakeName": "[concat(variables('namingInfix'), 'datalake')]",
     "osType": {
       "publisher": "MicrosoftWindowsServer",
       "offer": "WindowsServer",
@@ -131,10 +129,8 @@
       "version": "latest"
     },
     "imageReference": "[variables('osType')]",
-    "webDeployPackageFullPath": "[concat(parameters('_artifactsLocation'), parameters('webDeployPackage'))]",
-    "powershelldscZipFullPath": "[concat(parameters('_artifactsLocation'), parameters('powershelldscZip'))]",
-    "powershelldscArchiveFolder": "DSC",
-    "powershelldscArchiveFileName": "IISInstall.ps1.zip"
+    "createVMSSUrl": "[uri(parameters('_artifactsLocation'), concat('nestedtemplates/createVMSS.json', parameters('_artifactsLocationSasToken')))]",
+    "createRBACUrl": "[uri(parameters('_artifactsLocation'), concat('nestedtemplates/setUpRBAC.json', parameters('_artifactsLocationSasToken')))]"
   },
   "resources": [
     {
@@ -144,76 +140,75 @@
       "location": "westeurope",
       "dependsOn": [
         "[concat('Microsoft.Network/loadBalancers/', variables('loadBalancerName'))]",
-        "[concat('Microsoft.Network/virtualNetworks/', variables('virtualNetworkName'))]"
+        "[concat('Microsoft.Network/virtualNetworks/', variables('virtualNetworkName'))]",
+        "creatingVMSS"
       ],
       "properties": {
-          "sku": {
-              "family": "A",
-              "name": "standard"
-          },
-          "tenantId": "0dae7153-864b-40df-91b1-f5698f0cd1d1",
-          "accessPolicies": [
-              {
-                  "tenantId": "0dae7153-864b-40df-91b1-f5698f0cd1d1",
-                  "objectId": "04f64d3d-279b-40da-b2a6-21e01fcc9d60",
-                  "permissions": {
-                      "keys": [
-                          "Get",
-                          "List",
-                          "Update",
-                          "Create",
-                          "Import",
-                          "Delete",
-                          "Recover",
-                          "Backup",
-                          "Restore"
-                      ],
-                      "secrets": [
-                          "Get",
-                          "List",
-                          "Set",
-                          "Delete",
-                          "Recover",
-                          "Backup",
-                          "Restore"
-                      ],
-                      "certificates": [
-                          "Get",
-                          "List",
-                          "Update",
-                          "Create",
-                          "Import",
-                          "Delete",
-                          "Recover",
-                          "Backup",
-                          "Restore",
-                          "ManageContacts",
-                          "ManageIssuers",
-                          "GetIssuers",
-                          "ListIssuers",
-                          "SetIssuers",
-                          "DeleteIssuers"
-                      ]
-                  }
-              }
+        "sku": {
+          "family": "A",
+          "name": "standard"
+        },
+        "tenantId": "0dae7153-864b-40df-91b1-f5698f0cd1d1",
+        "accessPolicies": [
+          {
+            "tenantId": "0dae7153-864b-40df-91b1-f5698f0cd1d1",
+            "objectId": "[reference('Microsoft.Resources/deployments/creatingVMSS', '2018-05-01').outputs.principalId.value]",
+            "permissions": {
+              "keys": [
+                "get",
+                "list",
+                "update",
+                "create",
+                "import",
+                "delete",
+                "recover",
+                "backup",
+                "restore"
+              ],
+              "secrets": [
+                "get",
+                "list",
+                "set",
+                "delete",
+                "recover",
+                "backup",
+                "restore"
+              ],
+              "certificates": [
+                "get",
+                "list",
+                "update",
+                "create",
+                "import",
+                "delete",
+                "recover",
+                "managecontacts",
+                "manageissuers",
+                "getissuers",
+                "listissuers",
+                "setissuers",
+                "deleteissuers"
+              ]
+            }
+          }
+        ],
+        "enabledForDeployment": true,
+        "enabledForDiskEncryption": true,
+        "enabledForTemplateDeployment": true,
+        "networkAcls": {
+          "bypass": "AzureServices",
+          "virtualNetworkRules": [
+            {
+              "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', variables('virtualNetworkName'), variables('subnetName'))]",
+              "action": "Allow",
+              "state": "Succeeded"
+            }
           ],
-          "enabledForDeployment": true,
-          "enabledForDiskEncryption": true,
-          "enabledForTemplateDeployment": true,
-          "networkAcls": {
-            "bypass": "AzureServices",
-            "virtualNetworkRules": [
-                {
-                    "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', variables('virtualNetworkName'), variables('subnetName'))]",
-                    "action": "Allow",
-                    "state": "Succeeded"
-                }
-            ],
-            "ipRules": [],
-            "defaultAction": "Deny"
+          "ipRules": [],
+          "defaultAction": "Deny"
         }
       },
-      "resources" :[
+      "resources": [
         {
           "name": "[concat( variables('keyVaultName'),'/TestSecret')]",
           "type": "Microsoft.KeyVault/vaults/secrets",
@@ -250,19 +245,19 @@
               "addressPrefix": "[variables('subnetPrefix')]",
               "serviceEndpoints": [
                 {
-                    "provisioningState": "Succeeded",
-                    "service": "Microsoft.Storage",
-                    "locations": [
-                        "westeurope",
-                        "northeurope"
-                    ]
+                  "provisioningState": "Succeeded",
+                  "service": "Microsoft.Storage",
+                  "locations": [
+                    "westeurope",
+                    "northeurope"
+                  ]
                 },
                 {
-                    "provisioningState": "Succeeded",
-                    "service": "Microsoft.KeyVault",
-                    "locations": [
-                        "*"
-                    ]
+                  "provisioningState": "Succeeded",
+                  "service": "Microsoft.KeyVault",
+                  "locations": [
+                    "*"
+                  ]
                 }
               ]
             }
@@ -355,201 +350,125 @@
       }
     },
     {
-      "type": "Microsoft.Compute/virtualMachineScaleSets",
+      "type": "Microsoft.Resources/deployments",
       "name": "[variables('namingInfix')]",
-      "location": "[parameters('location')]",
-      "apiVersion": "2016-04-30-preview",
+      "apiVersion": "2018-05-01",
       "dependsOn": [
         "[concat('Microsoft.Network/loadBalancers/', variables('loadBalancerName'))]",
         "[concat('Microsoft.Network/virtualNetworks/', variables('virtualNetworkName'))]"
       ],
-      "sku": {
-        "name": "[parameters('vmSku')]",
-        "tier": "Standard",
-        "capacity": "[parameters('instanceCount')]"
-      },
       "properties": {
-        "overprovision": "true",
-        "upgradePolicy": {
-          "mode": "Manual"
+        "mode": "Incremental",
+        "templateLink": {
+          "uri": "[variables('createVMSSUrl')]",
+          "contentVersion": "1.0.0.0"
         },
-        "virtualMachineProfile": {
-          "storageProfile": {
-            "osDisk": {
-              "caching": "ReadWrite",
-              "createOption": "FromImage"
-            },
-            "imageReference": "[variables('imageReference')]"
+        "parameters": {
+          "vmssName": {
+            "value": "[parameters('vmssName')]"
           },
-          "osProfile": {
-            "computerNamePrefix": "[variables('namingInfix')]",
-            "adminUsername": "[parameters('adminUsername')]",
-            "adminPassword": "[parameters('adminPassword')]"
+          "vmSku": {
+            "value": "[parameters('vmSku')]"
           },
-          "networkProfile": {
-            "networkInterfaceConfigurations": [
-              {
-                "name": "[variables('nicName')]",
-                "properties": {
-                  "primary": true,
-                  "ipConfigurations": [
-                    {
-                      "name": "[variables('ipConfigName')]",
-                      "properties": {
-                        "subnet": {
-                          "id": "[concat('/subscriptions/', subscription().subscriptionId,'/resourceGroups/', resourceGroup().name, '/providers/Microsoft.Network/virtualNetworks/', variables('virtualNetworkName'), '/subnets/', variables('subnetName'))]"
-                        },
-                        "loadBalancerBackendAddressPools": [
-                          {
-                            "id": "[concat('/subscriptions/', subscription().subscriptionId,'/resourceGroups/', resourceGroup().name, '/providers/Microsoft.Network/loadBalancers/', variables('loadBalancerName'), '/backendAddressPools/', variables('bePoolName'))]"
-                          }
-                        ],
-                        "loadBalancerInboundNatPools": [
-                          {
-                            "id": "[concat('/subscriptions/', subscription().subscriptionId,'/resourceGroups/', resourceGroup().name, '/providers/Microsoft.Network/loadBalancers/', variables('loadBalancerName'), '/inboundNatPools/', variables('natPoolName'))]"
-                          }
-                        ]
-                      }
-                    }
-                  ]
-                }
-              }
-            ]
+          "location": {
+            "value": "[parameters('location')]"
           },
-          "extensionProfile": {
-            "extensions": [
-              {
-                "name": "Microsoft.Powershell.DSC",
-                "properties": {
-                  "publisher": "Microsoft.Powershell",
-                  "type": "DSC",
-                  "typeHandlerVersion": "2.9",
-                  "autoUpgradeMinorVersion": true,
-                  "forceUpdateTag": "[parameters('powershelldscUpdateTagVersion')]",
-                  "settings": {
-                    "configuration": {
-                      "url": "[variables('powershelldscZipFullPath')]",
-                      "script": "IISInstall.ps1",
-                      "function": "InstallIIS"
-                    },
-                    "configurationArguments": {
-                      "nodeName": "localhost",
-                      "WebDeployPackagePath": "[variables('webDeployPackageFullPath')]"
-                    }
-                  }
-                }
-              }
-            ]
+          "instanceCount": {
+            "value": "[parameters('instanceCount')]"
+          },
+          "imageReference": {
+            "value": "[variables('imageReference')]"
+          },
+          "adminUsername": {
+            "value": "[parameters('adminUsername')]"
+          },
+          "adminPassword": {
+            "value": "[parameters('adminPassword')]"
+          },
+          "_artifactsLocation": {
+            "value": "[parameters('_artifactsLocation')]"
+          },
+          "_artifactsLocationSasToken": {
+            "value": "[parameters('_artifactsLocationSasToken')]"
+          },
+          "webDeployPackage": {
+            "value": "[parameters('webDeployPackage')]"
+          },
+          "powershelldscZip": {
+            "value": "[parameters('powershelldscZip')]"
+          },
+          "powershelldscUpdateTagVersion": {
+            "value": "[parameters('powershelldscUpdateTagVersion')]"
           }
         }
       }
     },
     {
-      "type": "Microsoft.Insights/autoscaleSettings",
-      "apiVersion": "2015-04-01",
-      "name": "autoscalehost",
-      "location": "[parameters('location')]",
+      "type": "Microsoft.Storage/storageAccounts",
+      "apiVersion": "2018-07-01",
+      "name": "[variables('dataLakeName')]",
+      "location": "westeurope",
       "dependsOn": [
+        "[concat('Microsoft.Network/loadBalancers/', variables('loadBalancerName'))]",
+        "[concat('Microsoft.Network/virtualNetworks/', variables('virtualNetworkName'))]",
         "[concat('Microsoft.Compute/virtualMachineScaleSets/', variables('namingInfix'))]"
       ],
+      "sku": {
+        "name": "Standard_LRS",
+        "tier": "Standard"
+      },
+      "kind": "StorageV2",
       "properties": {
-        "name": "autoscalehost",
-        "targetResourceUri": "[concat('/subscriptions/',subscription().subscriptionId, '/resourceGroups/',  resourceGroup().name, '/providers/Microsoft.Compute/virtualMachineScaleSets/', variables('namingInfix'))]",
-        "enabled": true,
-        "profiles": [
-          {
-            "name": "Profile1",
-            "capacity": {
-              "minimum": "1",
-              "maximum": "2",
-              "default": "1"
+        "isHnsEnabled": true,
+        "networkAcls": {
+          "bypass": "AzureServices",
+          "virtualNetworkRules": [
+            {
+              "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', variables('virtualNetworkName'), variables('subnetName'))]",
+              "action": "Allow",
+              "state": "succeeded"
+            }
+          ],
+          "ipRules": [],
+          "defaultAction": "Deny"
+        },
+        "supportsHttpsTrafficOnly": true,
+        "encryption": {
+          "services": {
+            "file": {
+              "enabled": true
             },
-            "rules": [
-              {
-                "metricTrigger": {
-                  "metricName": "Percentage CPU",
-                  "metricNamespace": "",
-                  "metricResourceUri": "[concat('/subscriptions/',subscription().subscriptionId, '/resourceGroups/',  resourceGroup().name, '/providers/Microsoft.Compute/virtualMachineScaleSets/', variables('namingInfix'))]",
-                  "timeGrain": "PT1M",
-                  "statistic": "Average",
-                  "timeWindow": "PT5M",
-                  "timeAggregation": "Average",
-                  "operator": "GreaterThan",
-                  "threshold": 80
-                },
-                "scaleAction": {
-                  "direction": "Increase",
-                  "type": "ChangeCount",
-                  "value": "1",
-                  "cooldown": "PT5M"
-                }
-              },
-              {
-                "metricTrigger": {
-                  "metricName": "Percentage CPU",
-                  "metricNamespace": "",
-                  "metricResourceUri": "[concat('/subscriptions/',subscription().subscriptionId, '/resourceGroups/',  resourceGroup().name, '/providers/Microsoft.Compute/virtualMachineScaleSets/', variables('namingInfix'))]",
-                  "timeGrain": "PT1M",
-                  "statistic": "Average",
-                  "timeWindow": "PT5M",
-                  "timeAggregation": "Average",
-                  "operator": "LessThan",
-                  "threshold": 50
-                },
-                "scaleAction": {
-                  "direction": "Decrease",
-                  "type": "ChangeCount",
-                  "value": "1",
-                  "cooldown": "PT5M"
-                }
-              }
-            ]
-          }
-        ]
+            "blob": {
+              "enabled": true
+            }
+          },
+          "keySource": "Microsoft.Storage"
+        },
+        "accessTier": "[parameters('dataLakeAccessTier')]"
       }
     },
     {
-        "type": "Microsoft.Storage/storageAccounts",
-        "apiVersion": "2018-07-01",
-        "name": "[variables('dataLakeName')]",
-        "location": "westeurope",
-        "dependsOn": [
-          "[concat('Microsoft.Network/loadBalancers/', variables('loadBalancerName'))]",
-          "[concat('Microsoft.Network/virtualNetworks/', variables('virtualNetworkName'))]"
-        ],
-        "sku": {
-            "name": "Standard_LRS",
-            "tier": "Standard"
+      "name": "creatingRBAC",
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2018-05-01",
+      "dependsOn": [
+        "creatingVMSS"
+      ],
+      "properties": {
+        "mode": "Incremental",
+        "templateLink": {
+          "uri": "[variables('createRBACUrl')]",
+          "contentVersion": "1.0.0.0"
         },
-        "kind": "StorageV2",
-        "properties": {
-            "isHnsEnabled": true,
-            "networkAcls": {
-                "bypass": "AzureServices",
-                "virtualNetworkRules": [
-                    {
-                        "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', variables('virtualNetworkName'), variables('subnetName'))]",
-                        "action": "Allow",
-                        "state": "Succeeded"
-                    }
-                ],
-                "ipRules": [],
-                "defaultAction": "Deny"
-            },
-            "supportsHttpsTrafficOnly": true,
-            "encryption": {
-                "services": {
-                    "file": {
-                        "enabled": true
-                    },
-                    "blob": {
-                        "enabled": true
-                    }
-                },
-                "keySource": "Microsoft.Storage"
-            },
-            "accessTier": "[parameters('dataLakeAccessTier')]"
+        "parameters": {
+          "principalId": {
+            "value": "[reference('Microsoft.Resources/deployments/creatingVMSS', '2018-05-01').outputs.principalId.value]"
+          },
+          "storageAccountName": {
+            "value": "[variables('dataLakeName')]"
+          }
         }
+      }
     }
   ],
   "outputs": {
